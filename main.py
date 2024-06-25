@@ -10,32 +10,10 @@ SCREEN_X = 50
 SCREEN_Y = 100
 # частота кадров в секунду
 FPS = 60
-
-
-# ширина одной ячейки сетки
-cell_x = SCREEN_X / (COLUMNS - 1)
-# высота одной ячейки сетки
-cell_y = SCREEN_Y / (STRINGS - 1)
-
-pg.init()
-screen = pg.display.set_mode((SCREEN_X, SCREEN_Y))
-pg.display.set_caption("Tetris CODE")
-clock = pg.time.Clock()
-
-# создаём сетку игрового поля
-grid = []
-for i in range(COLUMNS):
-    grid.append([])
-    for j in range(STRINGS):
-        # 1 - ячейка свободна
-        grid[i].append([1])
-        # задаём координаты и размеры ячейки
-        grid[i][j].append(pg.Rect(i * cell_x, j * cell_y, cell_x, cell_y))
-        # задаём цвет ячейки
-        grid[i][j].append(pg.Color("Gray"))
+FPS_SPEED = FPS // 2
 
 # создаём фигуры
-details = [
+DETAILS = [
     # линия
     [[-2, 0], [-1, 0], [0, 0], [1, 0]],
     # L-образная
@@ -52,18 +30,55 @@ details = [
     [[-1, 1], [0, 1], [0, 0], [1, 0]]
 ]
 
-det = [[] for _ in details]
 
-for i in range(len(details)):
-    for j in range(len(details[i])):
+# ширина одной ячейки сетки
+cell_x = SCREEN_X / (COLUMNS - 1)
+# высота одной ячейки сетки
+cell_y = SCREEN_Y / (STRINGS - 1)
+
+# инициализация всех модулей pygame, тк некоторые части библиотеки pygame по умолчанию считаются необязательными.
+# Их нужно принудительно включить
+pg.init()
+# создаём окно игры
+screen = pg.display.set_mode((SCREEN_X, SCREEN_Y))
+# устанавливаем заголовок окна
+pg.display.set_caption("Tetris CODE")
+# создаём объект для отслеживания времени
+clock = pg.time.Clock()
+
+# создаём сетку игрового поля
+# сетка будет иметь вид
+# [[[state, rect, color], [state, rect, color], [state, rect, color]],
+#  [[state, rect, color], [state, rect, color], [state, rect, color]],
+#  [[state, rect, color], [state, rect, color], [state, rect, color]]]
+# state - состояние ячейки поля 1 - свободно, 0 - занято
+# rect - объект класса Rect(нач. коорд. по x, нач. коорд. по  y, ширина, высота)
+# color - цвет ячейки
+grid = []
+for i in range(COLUMNS):
+    grid.append([])
+    for j in range(STRINGS):
+        # 1 - ячейка свободна
+        grid[i].append([1])
+        # задаём координаты и размеры ячейки
+        grid[i][j].append(pg.Rect(i * cell_x, j * cell_y, cell_x, cell_y))
+        # задаём цвет ячейки
+        grid[i][j].append(pg.Color("Gray"))
+
+# список для заготовок фигур
+det = [[] for _ in DETAILS]
+# инициализация фигур
+for i in range(len(DETAILS)):
+    for j in range(len(DETAILS[i])):
         det[i].append(
-            pg.Rect(details[i][j][0] * cell_x + cell_x * (COLUMNS // 2),  # отрисовываем по X в центре
-                    details[i][j][1] * cell_y,
+            pg.Rect(DETAILS[i][j][0] * cell_x + cell_x * (COLUMNS // 2),  # отрисовываем по X в центре
+                    DETAILS[i][j][1] * cell_y,
                     cell_x,
                     cell_y))
 
+# создаём область Rect для одной ячейки фигуры
 detail = pg.Rect(0, 0, cell_x, cell_y)
-
+# выбираем случайную фигуру
 det_choice = copy.deepcopy(random.choice(det))
 # счётчик для управления скоростью падения фигур
 count = 0
@@ -94,14 +109,16 @@ while game:
                 rotate = True
     # получаем состояние всех клавиш на клавиатуре
     key = pg.key.get_pressed()
+    # ускорение падения
     if key[pg.K_DOWN]:
-        count = 31 * FPS
+        count = (FPS_SPEED + 1) * FPS
 
     # заполняем фон цветом
     screen.fill(pg.Color("Yellow"))
     # рисуем сетку поверх фона
     for i in range(COLUMNS):
         for j in range(STRINGS):
+            # поверхность для рисования, цвет, объект области Rect, толщина контура
             pg.draw.rect(screen, grid[i][j][2], grid[i][j][1], grid[i][j][0])
 
     # проверяем границы движения фигуры
@@ -110,8 +127,11 @@ while game:
         if ((det_choice[i].x + delta_x * cell_x < 0) or (det_choice[i].x + delta_x * cell_x >= SCREEN_X)):
             delta_x = 0
         # по вертикали
+        # сверяем координаты объекта и координаты заполненной сетки, делим чтобы получить соотв. индекс ячейки сетки
         if ((det_choice[i].y + cell_y >= SCREEN_Y) or (grid[int(det_choice[i].x // cell_x)][int(det_choice[i].y // cell_y) + 1][0] == 0)):
             delta_y = 0
+
+            # TODO: здесь можно добавить проверку на конец игры
 
             # отмечаем занятые ячейки, перекрашиваем фигуры
             for i in range(len(det_choice)):
@@ -170,9 +190,6 @@ while game:
                 break
         # если весь ряд заполнен
         if count_cells == (COLUMNS - 1):
-            # стираем заполненные ячейки
-            for l in range(COLUMNS):
-                grid[l][j][0] = 1
             # сдвигаем ячейки вниз
             for k in range(j, -1, -1):
                 for l in range(COLUMNS):
