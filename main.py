@@ -83,11 +83,14 @@ det_choice = copy.deepcopy(random.choice(det))
 # счётчик для управления скоростью падения фигур
 count = 0
 # флаг для управления игровым циклом
-game = True
+flags = {
+    "game": True,
+    "end": False
+}
 # флаг для управления поворотом фигур
 rotate = False
 
-while game:
+while flags["game"]:
     # смещение по оси X
     delta_x = 0
     # смещение по оси Y
@@ -131,7 +134,9 @@ while game:
         if ((det_choice[i].y + cell_y >= SCREEN_Y) or (grid[int(det_choice[i].x // cell_x)][int(det_choice[i].y // cell_y) + 1][0] == 0)):
             delta_y = 0
 
-            # TODO: здесь можно добавить проверку на конец игры
+            if int(det_choice[i].y // cell_y) <= 1:
+                flags["game"] = False
+                flags["end"] = True
 
             # отмечаем занятые ячейки, перекрашиваем фигуры
             for i in range(len(det_choice)):
@@ -198,3 +203,23 @@ while game:
 
     pg.display.flip()
     clock.tick(FPS)
+
+
+if flags["end"] == True:
+    while flags["end"]:
+
+        for event in pg.event.get():
+            # выход
+            if event.type == pg.QUIT:
+                exit()
+
+        # заполняем фон цветом
+        screen.fill(pg.Color("Brown"))
+        # рисуем сетку поверх фона
+        for i in range(COLUMNS):
+            for j in range(STRINGS):
+                # поверхность для рисования, цвет, объект области Rect, толщина контура
+                pg.draw.rect(screen, grid[i][j][2], grid[i][j][1], grid[i][j][0])
+
+        pg.display.flip()
+        clock.tick(FPS)
